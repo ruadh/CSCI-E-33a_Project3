@@ -1,3 +1,7 @@
+// Initialize a global for storing the current mailbox context so all functions can access it
+// Its value will be set when we call loadMailbox on DOMContentLoaded in the next block
+var currentMailbox = null;
+
 document.addEventListener('DOMContentLoaded', function () {
 
   // Use buttons to toggle between views
@@ -43,6 +47,9 @@ function enableSubmit() {
 }
 
 function loadMailbox(mailbox) {
+
+  // Store the selected mailbox's name in our global so other functions will know where we are
+  currentMailbox = mailbox;
 
   // Get the messages via the API
   const messageList = document.createElement('div');
@@ -143,15 +150,24 @@ function loadMessage(id) {
       const block = document.createElement('div');
 
       // Add the archive/unarchive button
-      const archiveButton = document.createElement('button');
-      archiveButton.addEventListener('click', () => updateArchived(email.id, !email.archived));
-      if (email.archived === true) {
-        archiveButton.innerHTML = 'Unarchive';
-      } else {
-        archiveButton.innerHTML = 'Archive';
-      }
-      // TO DO:  add the button action
-      block.appendChild(archiveButton);
+      if (currentMailbox !== 'sent') {
+        const archiveButton = document.createElement('button');
+        archiveButton.addEventListener('click', () => updateArchived(email.id, !email.archived));
+        archiveButton.classList.add('mailbox-button');
+        if (email.archived === true) {
+          archiveButton.innerHTML = 'Unarchive';
+        } else {
+          archiveButton.innerHTML = 'Archive';
+        }
+        block.appendChild(archiveButton);
+      } 
+
+      // Add the reply button
+      const replyButton = document.createElement('button');
+      replyButton.innerHTML = 'Reply';
+      replyButton.classList.add('mailbox-button');
+      replyButton.addEventListener('click', () => loadReply(email));
+      block.appendChild(replyButton);
 
       // Render the message components
       // TO DO: REFACTOR as DRY
@@ -204,6 +220,7 @@ function markRead(id) {
 }
 
 
+// TO DO:  Refactor to pass just the whole email, not the ID, and toggle it
 function updateArchived(id, boolean) {
   // Update the message via the API
   fetch(`/emails/${id}`, {
@@ -222,4 +239,16 @@ function updateArchived(id, boolean) {
         console.log(`Error updating archived status: ${response}`);
       }
     });
+}
+
+function loadReply(email) {
+  composeEmail();
+  document.querySelector('#compose-recipients').value = email.sender;
+  if (email.subject.slice(0, 4) === 'Re: '){
+    document.querySelector('#compose-subject').value = email.subject;
+  } else {
+    document.querySelector('#compose-subject').value = `Re: ${email.subject}`;
+  }
+  document.querySelector('#compose-body').value = `\n\n\nOn ${email.timestamp} ${email.sender} wrote:\n\n${email.body}`;
+  enableSubmit();
 }
