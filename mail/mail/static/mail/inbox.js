@@ -67,17 +67,10 @@ function loadMailbox(mailbox) {
           if (emails[email].read === true) {
             summary.classList.add('read');
           }
-          const from = document.createElement('span');
-          from.innerHTML = `From:  ${emails[email].sender}`;
-          from.classList.add('from');
-          summary.appendChild(from);
-          const subject = document.createElement('span');
-          subject.innerHTML = `&emsp;${emails[email].subject}`;
-          summary.appendChild(subject);
-          const timestamp = document.createElement('span');
-          timestamp.innerHTML = `&emsp;${emails[email].timestamp}`;
-          timestamp.classList.add('timestamp');
-          summary.appendChild(timestamp);
+          // TO DO:  Should this be TO in the sent box?  (waiting for clarirfication)
+          appendNewElement('span', `From:  ${emails[email].sender}`, 'from', summary);
+          appendNewElement('span', `&emsp;${emails[email].subject}`, null, summary);
+          appendNewElement('span', `&emsp;${emails[email].timestamp}`, 'timestamp', summary);
           // Append the full line to the div 
           messageList.appendChild(summary);
         }
@@ -94,6 +87,16 @@ function loadMailbox(mailbox) {
 
   // Add the list of messages
   document.querySelector('#emails-view').appendChild(messageList);
+}
+
+// Helper function:  creates a new HTML element and appends it to the parent
+function appendNewElement(element, innerHTML, cssClass = null, parent) {
+  const child = document.createElement(element);
+  child.innerHTML = innerHTML;
+  if (cssClass !== null) {
+    child.classList.add(cssClass);
+  }
+  parent.appendChild(child);
 }
 
 
@@ -160,7 +163,7 @@ function loadMessage(id) {
           archiveButton.innerHTML = 'Archive';
         }
         block.appendChild(archiveButton);
-      } 
+      }
 
       // Add the reply button
       const replyButton = document.createElement('button');
@@ -170,27 +173,11 @@ function loadMessage(id) {
       block.appendChild(replyButton);
 
       // Render the message components
-      // TO DO: REFACTOR as DRY
-      const timestamp = document.createElement('h4');
-      timestamp.innerHTML = email.timestamp;
-      timestamp.classList.add('timestamp');
-      block.appendChild(timestamp);
-      const from = document.createElement('h4');
-      from.innerHTML = `From:  ${email.sender}`;
-      from.classList.add('from');
-      block.appendChild(from);
-      const recipients = document.createElement('h4');
-      recipients.innerHTML = `To:  ${email.recipients}`;
-      recipients.classList.add('recipients');
-      block.appendChild(recipients);
-      const subject = document.createElement('h4');
-      subject.innerHTML = `Subject:  ${email.subject}`;
-      subject.classList.add('subject');
-      block.appendChild(subject);
-      const body = document.createElement('p');
-      body.innerHTML = email.body;
-      body.classList.add('body');
-      block.appendChild(body);
+      appendNewElement('h4', email.timestamp, 'timestamp', block);
+      appendNewElement('h4', `From:  ${email.sender}`, 'from', block);
+      appendNewElement('h4', `To:  ${email.recipients}`, 'recipients', block);
+      appendNewElement('h4', `Subject:  ${email.subject}`, 'subject', block);
+      appendNewElement('p', email.body, 'body', block);
       document.querySelector('#reader-view').appendChild(block);
     });
 
@@ -229,7 +216,7 @@ function updateArchived(id, boolean) {
       archived: boolean
     })
   })
-  // Error handling
+    // Error handling
     .then(response => {
       console.log(response);
       if (response.ok === true) {
@@ -244,7 +231,7 @@ function updateArchived(id, boolean) {
 function loadReply(email) {
   composeEmail();
   document.querySelector('#compose-recipients').value = email.sender;
-  if (email.subject.slice(0, 4) === 'Re: '){
+  if (email.subject.slice(0, 4) === 'Re: ') {
     document.querySelector('#compose-subject').value = email.subject;
   } else {
     document.querySelector('#compose-subject').value = `Re: ${email.subject}`;
