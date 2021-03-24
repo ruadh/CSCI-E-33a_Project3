@@ -178,13 +178,20 @@ function loadMessage(id) {
       replyButton.addEventListener('click', () => loadReply(email));
       block.appendChild(replyButton);
 
-      // Add the message components
+      // Add the message header info
       block.appendChild(newElement('h4', email.timestamp, 'timestamp'));
       block.appendChild(newElement('h4', `From:  ${email.sender}`, 'from'));
       block.appendChild(newElement('h4', `To:  ${email.recipients}`, 'recipients'));
       block.appendChild(newElement('h4', `Subject:  ${email.subject}`, 'subject'));
-      block.appendChild(newElement('p', email.body, 'body'));
 
+      // Add the message body, preserving the line breaks
+      let body = '';
+      email.body.split('\n').forEach(line => {
+        body += `${line}<br>`;
+      });
+      block.appendChild(newElement('p', body, 'body'));
+
+      // Add all the content to the page
       document.querySelector('#reader-view').appendChild(block);
     });
 
