@@ -21,9 +21,7 @@ document.addEventListener('DOMContentLoaded', function () {
 function composeEmail() {
 
   // Show compose view and hide other views
-  document.querySelector('#reader-view').style.display = 'none';
-  document.querySelector('#emails-view').style.display = 'none';
-  document.querySelector('#compose-view').style.display = 'block';
+  displaySegment('#compose-view');
 
   // Clear out composition fields
   document.querySelector('#compose-recipients').value = '';
@@ -47,6 +45,16 @@ function enableSubmit() {
 
 }
 
+// Show/Hide page segments
+function displaySegment(id) {
+  // Disable them all
+  document.querySelector('#reader-view').style.display = 'none';
+  document.querySelector('#emails-view').style.display = 'none';
+  document.querySelector('#compose-view').style.display = 'none';
+  // Reenable the one we want to view
+  document.querySelector(id).style.display = 'block';
+}
+
 // Helper function:  create a new HTML element with the specified innerHTML and optional class
 // Note:  I originally had it append the result to the parent element as well, but I removed it,
 //        since we sometimes need to add child elements or event listeners before appending.
@@ -60,19 +68,30 @@ function newElement(element, innerHTML, cssClass = null) {
 }
 
 function loadMailbox(mailbox) {
+  // TEMP FOR TESTING
+  console.log(mailbox);
 
   // Store the selected mailbox's name in our global so other functions will know where we are
   currentMailbox = mailbox;
 
   // Create a container element for the message lines
   const messageList = document.createElement('div');
+  messageList.innerHTML = 'Loading Mailbox...';
 
   // Get the messages via the API
   fetch(`/emails/${mailbox}`)
     .then(response => response.json())
     .then(emails => {
-      if (emails.length > 0) {
-        // Add each email's summary line
+
+      // Clear the loading message
+      messageList.innerHTML = '';
+
+      // Display the message count
+      const count = emails.length;
+      messageList.appendChild(newElement('p', `${count} message(s)`));
+
+      // Create a summary line for each message
+      if (count > 0) {
         for (const email in emails) {
           // Create the the line and make it clickable to load the message detail
           const summary = newElement('div', null, 'message-row');
@@ -90,6 +109,7 @@ function loadMailbox(mailbox) {
           }
           summary.appendChild(newElement('span', `&emsp;${emails[email].subject}`));
           summary.appendChild(newElement('span', `&emsp;${emails[email].timestamp}`, 'timestamp'));
+
           // Append the full line to the div 
           messageList.appendChild(summary);
         }
@@ -97,9 +117,7 @@ function loadMailbox(mailbox) {
     })
 
   // Show the mailbox and hide other views
-  document.querySelector('#reader-view').style.display = 'none';
-  document.querySelector('#emails-view').style.display = 'block';
-  document.querySelector('#compose-view').style.display = 'none';
+  displaySegment('#emails-view');
 
   // Show the mailbox name
   document.querySelector('#emails-view').innerHTML = `<h3>${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}</h3>`;
@@ -112,11 +130,14 @@ function loadMailbox(mailbox) {
 // Send a message
 function sendEmail() {
 
+  // Prevent the user from repeatedly pressing the Submit button if there is a delay
+  document.querySelector('#submit-email').disabled = true;
+
   // Prevent submission of form & refresh of the page
   event.preventDefault();
 
   // We are NOT validating the form contents, since the API checks the recipients,
-  // And the spec does not prohibit blank emails, sending to self, etc.
+  // and the spec does not prohibit other things we might validate, like blank emails, sending to self, etc.
   form = document.querySelector('#compose-form');
   to = form.querySelector('#compose-recipients').value;
   subject = form.querySelector('#compose-subject').value;
@@ -136,6 +157,8 @@ function sendEmail() {
       error = result.error;
       if (error !== undefined) {
         alert(error);
+        // Reenable the Submit button so the user can try again
+        document.querySelector('#submit-email').disabled = false;
       } else {
         loadMailbox('sent');
       }
@@ -148,7 +171,8 @@ function sendEmail() {
 function loadMessage(id) {
 
   // Clear any previously-existing content in the reader view
-  document.querySelector('#reader-view').innerHTML = '';
+  // The message rows are cleared at this point, so we don't have to prevent multiple clicks.
+  document.querySelector('#reader-view').innerHTML = 'Loading Message...';
 
   // Retrieve the message via the API
   fetch(`/emails/${id}`)
@@ -191,14 +215,13 @@ function loadMessage(id) {
       });
       block.appendChild(newElement('p', body, 'body'));
 
-      // Add all the content to the page
+      // Clear the loading message and add all the content to the page
+      document.querySelector('#reader-view').innerHTML = '';
       document.querySelector('#reader-view').appendChild(block);
     });
 
   // Show reader view and hide other views
-  document.querySelector('#reader-view').style.display = 'block';
-  document.querySelector('#emails-view').style.display = 'none';
-  document.querySelector('#compose-view').style.display = 'none';
+  displaySegment('#reader-view');
 
 }
 
@@ -224,6 +247,13 @@ function markRead(id) {
 // Toggle an email's archived status
 
 function updateArchived(email) {
+  // TEMP FOR TESTING
+  console.log('updateArchived');
+
+  // Disable the archive/unarchive and reply button so the user can't keep pressing them if there is a delay
+  // CITATION:  I got help with the forEach syntax from https://stackoverflow.com/a/51330000
+  document.querySelectorAll('.mailbox-button').forEach(button => {button.disabled = true});
+
   // Update the message via the API
   fetch(`/emails/${email.id}`, {
       method: 'PUT',
@@ -233,18 +263,24 @@ function updateArchived(email) {
     })
     // Error handling
     .then(response => {
-      console.log(response);
+      // console.log(response);
       if (response.ok === true) {
         loadMailbox('inbox');
       } else {
         alert('An unexpected error occurred.  Your message\'s archived status has NOT been changed.');
         console.log(`Error updating archived status: ${response}`);
+        // Re-enable the the archive/unarchive and reply buttons, so the user can try again
+        document.querySelectorAll('.mailbox-button').forEach(button => {button.disabled = false});
       }
     });
 }
 
 function loadReply(email) {
-  console.log('reply');
+
+  // Note:  I am NOT disabling the reply button to prevent repeated clicks.
+  //        Since this doesn't interact with the API, substantial delays are unlikely,
+  //        and the consequences are minimal.
+
   composeEmail();
   document.querySelector('#compose-recipients').value = email.sender;
   if (email.subject.slice(0, 4) === 'Re: ') {
