@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import User, Email
 
 # TEMP FOR TESTING - JESS REED
-import time
+# import time
 
 
 def index(request):
@@ -29,7 +29,7 @@ def index(request):
 def compose(request):
 
     # TEMP FOR TESTING - JESS REED
-    time.sleep(2)
+    # time.sleep(2)
 
     # Composing a new email must be via POST
     if request.method != "POST":
@@ -82,7 +82,7 @@ def compose(request):
 def mailbox(request, mailbox):
 
     # TEMP FOR TESTING - JESS REED
-    time.sleep(2)
+    # time.sleep(2)
 
     # Filter emails returned based on mailbox
     if mailbox == "inbox":
@@ -110,7 +110,7 @@ def mailbox(request, mailbox):
 def email(request, email_id):
 
     # TEMP FOR TESTING - JESS REED
-    time.sleep(2)
+    # time.sleep(2)
 
     # Query for requested email
     try:

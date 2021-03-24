@@ -56,13 +56,13 @@ function displaySegment(id) {
 }
 
 // Helper function:  create a new HTML element with the specified innerHTML and optional class
-// Note:  I originally had it append the result to the parent element as well, but I removed it,
-//        since we sometimes need to add child elements or event listeners before appending.
 function newElement(element, innerHTML, cssClass = null) {
   const child = document.createElement(element);
   child.innerHTML = innerHTML;
   if (cssClass !== null) {
-    child.classList.add(cssClass);
+      cssClass.split(' ').forEach(cssClass => {
+        child.classList.add(cssClass);
+      });
   }
   return child;
 }
@@ -187,7 +187,7 @@ function loadMessage(id) {
 
       // Add the archive/unarchive button  (except when viewing sent messages)
       if (currentMailbox !== 'sent') {
-        const archiveButton = newElement('button', '', 'mailbox-button');
+        const archiveButton = newElement('button', '', 'mailbox-button btn btn-primary');
         if (email.archived === true) {
           archiveButton.innerHTML = 'Unarchive';
         } else {
@@ -198,15 +198,15 @@ function loadMessage(id) {
       }
 
       // Add the reply button
-      const replyButton = newElement('button', 'Reply', 'mailbox-button');
+      const replyButton = newElement('button', 'Reply', 'mailbox-button btn btn-primary');
       replyButton.addEventListener('click', () => loadReply(email));
       block.appendChild(replyButton);
 
       // Add the message header info
       block.appendChild(newElement('h4', email.timestamp, 'timestamp'));
-      block.appendChild(newElement('h4', `From:  ${email.sender}`, 'from'));
-      block.appendChild(newElement('h4', `To:  ${email.recipients}`, 'recipients'));
-      block.appendChild(newElement('h4', `Subject:  ${email.subject}`, 'subject'));
+      block.appendChild(newElement('h4', `From:  ${email.sender}`));
+      block.appendChild(newElement('h4', `To:  ${email.recipients}`));
+      block.appendChild(newElement('h4', `Subject:  ${email.subject}`));
 
       // Add the message body, preserving the line breaks
       let body = '';

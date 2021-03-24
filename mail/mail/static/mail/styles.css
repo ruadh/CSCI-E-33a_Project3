@@ -1,10 +1,12 @@
 textarea {
     min-height: 400px;
+    margin-bottom: 1rem;
 }
 
 .message-row {
     border: solid black 1px;
-    padding: 0.3rem;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
 .from,
@@ -18,8 +20,22 @@ textarea {
 }
 
 .read {
-    background-color: lightgray;
+    background-color: #ebebeb;
 }
+
+.body {
+    margin-top: 2rem;
+}
+
+.mailbox-button {
+    margin-bottom: 1.5rem;
+    margin-right: 1rem;
+}
+
+.container {
+    margin-bottom: 2rem;
+}
+
 
 /* TEMP FOR DEVELOPMENT */
 .dev {
