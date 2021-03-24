@@ -1,7 +1,8 @@
-// Initialize a global for storing the current mailbox context so all functions can access it
-// Its value will be set when we call loadMailbox on DOMContentLoaded in the next block
+// Initialize a storage global so all functions can know the current mailbox context
+// Its value is set when we call loadMailbox on DOMContentLoaded in the next block
 var currentMailbox = null;
 
+// Initial page load
 document.addEventListener('DOMContentLoaded', function () {
 
   // Use buttons to toggle between views
@@ -46,31 +47,49 @@ function enableSubmit() {
 
 }
 
+// Helper function:  create a new HTML element with the specified innerHTML and optional class
+// Note:  I originally had it append the result to the parent element as well, but I removed it,
+//        since we sometimes need to add child elements or event listeners before appending.
+function newElement(element, innerHTML, cssClass = null) {
+  const child = document.createElement(element);
+  child.innerHTML = innerHTML;
+  if (cssClass !== null) {
+    child.classList.add(cssClass);
+  }
+  return child;
+}
+
 function loadMailbox(mailbox) {
 
   // Store the selected mailbox's name in our global so other functions will know where we are
   currentMailbox = mailbox;
 
-  // Get the messages via the API
+  // Create a container element for the message lines
   const messageList = document.createElement('div');
+
+  // Get the messages via the API
   fetch(`/emails/${mailbox}`)
     .then(response => response.json())
     .then(emails => {
-      // Add each email's summary line
       if (emails.length > 0) {
-        // console.log(emails);
+        // Add each email's summary line
         for (const email in emails) {
-          // TO DO REFACTOR:  DRY
-          const summary = document.createElement('div');
-          summary.classList.add('message-row')
+          // Create the the line and make it clickable to load the message detail
+          const summary = newElement('div', null, 'message-row');
           summary.addEventListener('click', () => loadMessage(emails[email].id));
+          // Style the line based on it's read/unread status
           if (emails[email].read === true) {
             summary.classList.add('read');
           }
-          // TO DO:  Should this be TO in the sent box?  (waiting for clarirfication)
-          appendNewElement('span', `From:  ${emails[email].sender}`, 'from', summary);
-          appendNewElement('span', `&emsp;${emails[email].subject}`, null, summary);
-          appendNewElement('span', `&emsp;${emails[email].timestamp}`, 'timestamp', summary);
+          // Add the message header details
+          if (mailbox === 'sent') {
+            // Vlad said it was okay to display the To: for sent messages, even though the spec calls for From:
+            summary.appendChild(newElement('span', `To:  ${emails[email].recipients}`, 'to'));
+          } else {
+            summary.appendChild(newElement('span', `From:  ${emails[email].sender}`, 'from'));
+          }
+          summary.appendChild(newElement('span', `&emsp;${emails[email].subject}`));
+          summary.appendChild(newElement('span', `&emsp;${emails[email].timestamp}`, 'timestamp'));
           // Append the full line to the div 
           messageList.appendChild(summary);
         }
@@ -89,16 +108,6 @@ function loadMailbox(mailbox) {
   document.querySelector('#emails-view').appendChild(messageList);
 }
 
-// Helper function:  creates a new HTML element and appends it to the parent
-function appendNewElement(element, innerHTML, cssClass = null, parent) {
-  const child = document.createElement(element);
-  child.innerHTML = innerHTML;
-  if (cssClass !== null) {
-    child.classList.add(cssClass);
-  }
-  parent.appendChild(child);
-}
-
 
 // Send a message
 function sendEmail() {
@@ -115,13 +124,13 @@ function sendEmail() {
 
   // Send the message via the API
   fetch('/emails', {
-    method: 'POST',
-    body: JSON.stringify({
-      recipients: to,
-      subject: subject,
-      body: body
+      method: 'POST',
+      body: JSON.stringify({
+        recipients: to,
+        subject: subject,
+        body: body
+      })
     })
-  })
     .then(response => response.json())
     .then(result => {
       error = result.error;
@@ -152,32 +161,30 @@ function loadMessage(id) {
       // Create a container element for the message view
       const block = document.createElement('div');
 
-      // Add the archive/unarchive button
+      // Add the archive/unarchive button  (except when viewing sent messages)
       if (currentMailbox !== 'sent') {
-        const archiveButton = document.createElement('button');
-        archiveButton.addEventListener('click', () => updateArchived(email.id, !email.archived));
-        archiveButton.classList.add('mailbox-button');
+        const archiveButton = newElement('button', '', 'mailbox-button');
         if (email.archived === true) {
           archiveButton.innerHTML = 'Unarchive';
         } else {
           archiveButton.innerHTML = 'Archive';
         }
+        archiveButton.addEventListener('click', () => updateArchived(email));
         block.appendChild(archiveButton);
       }
 
       // Add the reply button
-      const replyButton = document.createElement('button');
-      replyButton.innerHTML = 'Reply';
-      replyButton.classList.add('mailbox-button');
+      const replyButton = newElement('button', 'Reply', 'mailbox-button');
       replyButton.addEventListener('click', () => loadReply(email));
       block.appendChild(replyButton);
 
-      // Render the message components
-      appendNewElement('h4', email.timestamp, 'timestamp', block);
-      appendNewElement('h4', `From:  ${email.sender}`, 'from', block);
-      appendNewElement('h4', `To:  ${email.recipients}`, 'recipients', block);
-      appendNewElement('h4', `Subject:  ${email.subject}`, 'subject', block);
-      appendNewElement('p', email.body, 'body', block);
+      // Add the message components
+      block.appendChild(newElement('h4', email.timestamp, 'timestamp'));
+      block.appendChild(newElement('h4', `From:  ${email.sender}`, 'from'));
+      block.appendChild(newElement('h4', `To:  ${email.recipients}`, 'recipients'));
+      block.appendChild(newElement('h4', `Subject:  ${email.subject}`, 'subject'));
+      block.appendChild(newElement('p', email.body, 'body'));
+
       document.querySelector('#reader-view').appendChild(block);
     });
 
@@ -192,13 +199,13 @@ function loadMessage(id) {
 function markRead(id) {
   // Update the message via the API
   fetch(`/emails/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      read: true
+      method: 'PUT',
+      body: JSON.stringify({
+        read: true
+      })
     })
-  })
     // If the message can't be marked read, log it to the console
-    // (The user doesn't need to see an error in this case)
+    // (The user doesn't know that we tried to mark it as read, so they don't need to see an error in this situation.)
     .then(response => {
       if (response.ok !== true) {
         console.log(`Error marking read: ${response}`);
@@ -207,28 +214,30 @@ function markRead(id) {
 }
 
 
-// TO DO:  Refactor to pass just the whole email, not the ID, and toggle it
-function updateArchived(id, boolean) {
+// Toggle an email's archived status
+
+function updateArchived(email) {
   // Update the message via the API
-  fetch(`/emails/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      archived: boolean
+  fetch(`/emails/${email.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        archived: !email.archived
+      })
     })
-  })
     // Error handling
     .then(response => {
       console.log(response);
       if (response.ok === true) {
         loadMailbox('inbox');
       } else {
-        // TO DO:  should we show the user an error here?
+        alert('An unexpected error occurred.  Your message\'s archived status has NOT been changed.');
         console.log(`Error updating archived status: ${response}`);
       }
     });
 }
 
 function loadReply(email) {
+  console.log('reply');
   composeEmail();
   document.querySelector('#compose-recipients').value = email.sender;
   if (email.subject.slice(0, 4) === 'Re: ') {
