@@ -1,5 +1,5 @@
-// Initialize a storage global so all functions can know the current mailbox context
-// Its value is set when we call loadMailbox on DOMContentLoaded in the next block
+// Initialize a storage global so all functions can access the current mailbox context
+// Its value is set below when we call loadMailbox on DOMContentLoaded
 var currentMailbox = null;
 
 // Initial page load
@@ -18,6 +18,11 @@ document.addEventListener('DOMContentLoaded', function () {
   loadMailbox('inbox');
 });
 
+
+/**
+ * Load the compose email form
+ */
+
 function composeEmail() {
 
   // Show compose view and hide other views
@@ -33,7 +38,11 @@ function composeEmail() {
   document.querySelector('#compose-recipients').addEventListener('keyup', enableSubmit);
 }
 
-// Disable the submit button when the recipients field is empty
+
+/**
+ * Disable the submit button when the recipients field is empty
+ */
+
 function enableSubmit() {
 
   recipients = document.querySelector('#compose-recipients');
@@ -45,7 +54,12 @@ function enableSubmit() {
 
 }
 
-// Show/Hide page segments
+
+/**
+ * Show the specified page segment, and hide the others
+ * @param {number} id - The id of the HTML element you want to show.
+ */
+
 function displaySegment(id) {
   // Disable them all
   document.querySelector('#reader-view').style.display = 'none';
@@ -55,21 +69,35 @@ function displaySegment(id) {
   document.querySelector(id).style.display = 'block';
 }
 
-// Helper function:  create a new HTML element with the specified innerHTML and optional class
+
+/**
+ * Create a new HTML element with the specified innerHTML and optional space
+ * @param {string} element - The type of HTML element to be created
+ * @param {string} innerHTML - The inner HTML to be added to the new element
+ * @param {string} [cssClass] - A space-separated list of classes to be added to the new element
+ * 
+ * It would also be useful to support adding the event listeners here,
+ * but passing a function and an unknown number of parameters is beyond my skills right now.
+ */
+
 function newElement(element, innerHTML, cssClass = null) {
   const child = document.createElement(element);
   child.innerHTML = innerHTML;
   if (cssClass !== null) {
-      cssClass.split(' ').forEach(cssClass => {
-        child.classList.add(cssClass);
-      });
+    cssClass.split(' ').forEach(cssClass => {
+      child.classList.add(cssClass);
+    });
   }
   return child;
 }
 
+
+/**
+ * Load the specified mailbox
+ * @param {string} mailbox - The name of the mailbox to be loaded
+ */
+
 function loadMailbox(mailbox) {
-  // TEMP FOR TESTING
-  console.log(mailbox);
 
   // Store the selected mailbox's name in our global so other functions will know where we are
   currentMailbox = mailbox;
@@ -77,6 +105,12 @@ function loadMailbox(mailbox) {
   // Create a container element for the message lines
   const messageList = document.createElement('div');
   messageList.innerHTML = 'Loading Mailbox...';
+
+  // Disable the navigation buttons (except logout) while the mailbox loads
+  // NOTE:  I use this pattern several times, but it seems too short to be worth making into a function
+  document.querySelectorAll('.loading-disable').forEach(button => {
+    button.disabled = true;
+  });
 
   // Get the messages via the API
   fetch(`/emails/${mailbox}`)
@@ -88,7 +122,8 @@ function loadMailbox(mailbox) {
 
       // Display the message count
       const count = emails.length;
-      messageList.appendChild(newElement('p', `${count} message(s)`));
+      // CITATION:  I learned about the ternary operator from MDN https://mzl.la/3fdzDF9
+      messageList.appendChild(newElement('p', `${count} message${(count === 1 ? '' : 's')}`));
 
       // Create a summary line for each message
       if (count > 0) {
@@ -112,6 +147,11 @@ function loadMailbox(mailbox) {
 
           // Append the full line to the div 
           messageList.appendChild(summary);
+
+          // Reenable the navigation buttons
+          document.querySelectorAll('.loading-disable').forEach(button => {
+            button.disabled = false;
+          });
         }
       }
     })
@@ -127,7 +167,10 @@ function loadMailbox(mailbox) {
 }
 
 
-// Send a message
+/**
+ * Send a message using the values in the Compose form
+ */
+
 function sendEmail() {
 
   // Prevent the user from repeatedly pressing the Submit button if there is a delay
@@ -167,7 +210,11 @@ function sendEmail() {
 }
 
 
-// Load a message
+/**
+ * Display a single message
+ * @param {number} id - The ID of the email to be retrieved
+ */
+
 function loadMessage(id) {
 
   // Clear any previously-existing content in the reader view
@@ -226,6 +273,11 @@ function loadMessage(id) {
 }
 
 
+/**
+ * Mark a single message as read
+ * @param {number} id - The ID of the email to be modified
+ */
+
 function markRead(id) {
   // Update the message via the API
   fetch(`/emails/${id}`, {
@@ -244,15 +296,18 @@ function markRead(id) {
 }
 
 
-// Toggle an email's archived status
+/**
+ * Toggle an email's archived status
+ * @param {object} email - The email object whose status should be updated
+ */
 
 function updateArchived(email) {
-  // TEMP FOR TESTING
-  console.log('updateArchived');
 
   // Disable the archive/unarchive and reply button so the user can't keep pressing them if there is a delay
   // CITATION:  I got help with the forEach syntax from https://stackoverflow.com/a/51330000
-  document.querySelectorAll('.mailbox-button').forEach(button => {button.disabled = true});
+  document.querySelectorAll('.mailbox-button').forEach(button => {
+    button.disabled = true
+  });
 
   // Update the message via the API
   fetch(`/emails/${email.id}`, {
@@ -263,17 +318,24 @@ function updateArchived(email) {
     })
     // Error handling
     .then(response => {
-      // console.log(response);
       if (response.ok === true) {
         loadMailbox('inbox');
       } else {
         alert('An unexpected error occurred.  Your message\'s archived status has NOT been changed.');
         console.log(`Error updating archived status: ${response}`);
         // Re-enable the the archive/unarchive and reply buttons, so the user can try again
-        document.querySelectorAll('.mailbox-button').forEach(button => {button.disabled = false});
+        document.querySelectorAll('.mailbox-button').forEach(button => {
+          button.disabled = false
+        });
       }
     });
 }
+
+
+/**
+ * Load the selected email into the compose form as a reply
+ * @param {object} email - The email object to quote in the reply
+ */
 
 function loadReply(email) {
 
@@ -281,6 +343,7 @@ function loadReply(email) {
   //        Since this doesn't interact with the API, substantial delays are unlikely,
   //        and the consequences are minimal.
 
+  // Load the compose form and populate it with the quoted message
   composeEmail();
   document.querySelector('#compose-recipients').value = email.sender;
   if (email.subject.slice(0, 4) === 'Re: ') {
