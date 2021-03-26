@@ -261,7 +261,6 @@ function loadMessage(id) {
       block.appendChild(actionButtons);
 
       // Add the message header info
-      // block.appendChild(newElement('h4', email.timestamp, 'timestamp'));
       block.appendChild(newElement('h4', `From:  ${email.sender}`));
       block.appendChild(newElement('h4', `To:  ${email.recipients}`));
       block.appendChild(newElement('h4', `Subject:  ${email.subject}`));
