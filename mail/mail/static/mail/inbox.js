@@ -1,4 +1,4 @@
-// Initialize a storage global so all functions can access the current mailbox context
+// Initialize a global to store the current mailbox, so other functions know the context
 // Its value is set below when we call loadMailbox on DOMContentLoaded
 var currentMailbox = null;
 
@@ -56,7 +56,7 @@ function enableSubmit() {
 
 
 /**
- * Show the specified page segment, and hide the others
+ * Show the specified page segment and hide the others
  * @param {number} id - The id of the HTML element you want to show.
  */
 
@@ -71,13 +71,13 @@ function displaySegment(id) {
 
 
 /**
- * Create a new HTML element with the specified innerHTML and optional space
+ * Create a new HTML element with the specified innerHTML and optional classes
  * @param {string} element - The type of HTML element to be created
  * @param {string} innerHTML - The inner HTML to be added to the new element
- * @param {string} [cssClass] - A space-separated list of classes to be added to the new element
+ * @param {string} [cssClass] - A space-delimited list of classes to be added to the new element
  * 
- * It would also be useful to support adding the event listeners here,
- * but passing a function and an unknown number of parameters is beyond my skills right now.
+ * NOTE: It would also be useful to support adding the event listeners here,
+ * but passing a function with an unknown number of parameters is beyond my skills right now.
  */
 
 function newElement(element, innerHTML, cssClass = null) {
@@ -94,7 +94,10 @@ function newElement(element, innerHTML, cssClass = null) {
 
 /**
  * Load the specified mailbox
- * @param {string} mailbox - The name of the mailbox to be loaded
+ * @param {string} mailbox - The name of the mailbox to be loaded.  
+ * 
+ * Supported values for mailbox are listed in the API documentation: 
+ * https://cs50.harvard.edu/extension/web/2021/spring/projects/3/mail/
  */
 
 function loadMailbox(mailbox) {
@@ -117,19 +120,17 @@ function loadMailbox(mailbox) {
     .then(response => response.json())
     .then(emails => {
 
-      // Clear the loading message
+      // Clear the loading message and show the message count instead
       messageList.innerHTML = '';
-
-      // Display the message count
       const count = emails.length;
-      // CITATION:  I learned about the ternary operator from MDN https://mzl.la/3fdzDF9
+      // CITATION:  I learned about the ternary operator from MDN at https://mzl.la/3fdzDF9
       messageList.appendChild(newElement('p', `${count} message${(count === 1 ? '' : 's')}`));
 
       // Create a summary line for each message
       if (count > 0) {
         for (const email in emails) {
           // Create the the line and make it clickable to load the message detail
-          const summary = newElement('div', null, 'message-row');
+          const summary = newElement('div', null, 'list-row');
           summary.addEventListener('click', () => loadMessage(emails[email].id));
           // Style the line based on it's read/unread status
           if (emails[email].read === true) {
@@ -138,22 +139,24 @@ function loadMailbox(mailbox) {
           // Add the message header details
           if (mailbox === 'sent') {
             // Vlad said it was okay to display the To: for sent messages, even though the spec calls for From:
-            summary.appendChild(newElement('span', `To:  ${emails[email].recipients}`, 'to'));
+            summary.appendChild(newElement('span', `To:  ${emails[email].recipients}`, 'message-address'));
           } else {
-            summary.appendChild(newElement('span', `From:  ${emails[email].sender}`, 'from'));
+            summary.appendChild(newElement('span', `From:  ${emails[email].sender}`, 'message-address'));
           }
           summary.appendChild(newElement('span', `&emsp;${emails[email].subject}`));
-          summary.appendChild(newElement('span', `&emsp;${emails[email].timestamp}`, 'timestamp'));
+          summary.appendChild(newElement('span', `&emsp;${emails[email].timestamp}`, 'list-timestamp'));
 
           // Append the full line to the div 
           messageList.appendChild(summary);
 
-          // Reenable the navigation buttons
-          document.querySelectorAll('.loading-disable').forEach(button => {
-            button.disabled = false;
-          });
         }
       }
+
+      // Reenable the navigation buttons
+      document.querySelectorAll('.loading-disable').forEach(button => {
+        button.disabled = false;
+      });
+
     })
 
   // Show the mailbox and hide other views
@@ -176,11 +179,12 @@ function sendEmail() {
   // Prevent the user from repeatedly pressing the Submit button if there is a delay
   document.querySelector('#submit-email').disabled = true;
 
-  // Prevent submission of form & refresh of the page
+  // Prevent normal form submission, which would refresh the page
   event.preventDefault();
 
-  // We are NOT validating the form contents, since the API checks the recipients,
-  // and the spec does not prohibit other things we might validate, like blank emails, sending to self, etc.
+  // Gather the form values
+  // NOTE:  We are NOT validating the form contents, since the API checks the recipients,
+  // and the spec does not prohibit other things we might validate like blank emails, sending to self, etc.
   form = document.querySelector('#compose-form');
   to = form.querySelector('#compose-recipients').value;
   subject = form.querySelector('#compose-subject').value;
@@ -197,6 +201,7 @@ function sendEmail() {
     })
     .then(response => response.json())
     .then(result => {
+      // Load the sent mailbox or show an error
       error = result.error;
       if (error !== undefined) {
         alert(error);
@@ -232,7 +237,10 @@ function loadMessage(id) {
       // Create a container element for the message view
       const block = document.createElement('div');
 
-      // Add the archive/unarchive button  (except when viewing sent messages)
+      // Create a flex container for the archive/unarchive and reply buttons
+      const actionButtons = newElement('div', '', 'action-buttons');
+
+      // Add the archive/unarchive button, except when viewing sent messages
       if (currentMailbox !== 'sent') {
         const archiveButton = newElement('button', '', 'mailbox-button btn btn-primary');
         if (email.archived === true) {
@@ -241,19 +249,23 @@ function loadMessage(id) {
           archiveButton.innerHTML = 'Archive';
         }
         archiveButton.addEventListener('click', () => updateArchived(email));
-        block.appendChild(archiveButton);
+        actionButtons.appendChild(archiveButton);
       }
 
       // Add the reply button
       const replyButton = newElement('button', 'Reply', 'mailbox-button btn btn-primary');
       replyButton.addEventListener('click', () => loadReply(email));
-      block.appendChild(replyButton);
+      actionButtons.appendChild(replyButton);
+
+      // Append the buttons to the block
+      block.appendChild(actionButtons);
 
       // Add the message header info
-      block.appendChild(newElement('h4', email.timestamp, 'timestamp'));
+      // block.appendChild(newElement('h4', email.timestamp, 'timestamp'));
       block.appendChild(newElement('h4', `From:  ${email.sender}`));
       block.appendChild(newElement('h4', `To:  ${email.recipients}`));
       block.appendChild(newElement('h4', `Subject:  ${email.subject}`));
+      block.appendChild(newElement('h4', email.timestamp));
 
       // Add the message body, preserving the line breaks
       let body = '';
@@ -279,15 +291,15 @@ function loadMessage(id) {
  */
 
 function markRead(id) {
-  // Update the message via the API
+  // Update the message's read status via the API
   fetch(`/emails/${id}`, {
       method: 'PUT',
       body: JSON.stringify({
         read: true
       })
     })
-    // If the message can't be marked read, log it to the console
-    // (The user doesn't know that we tried to mark it as read, so they don't need to see an error in this situation.)
+    // If the message can't be marked read, log an error to the console
+    // (The user doesn't know that our function tried to mark it as read, so they don't need to see an error in this situation.)
     .then(response => {
       if (response.ok !== true) {
         console.log(`Error marking read: ${response}`);
@@ -303,7 +315,7 @@ function markRead(id) {
 
 function updateArchived(email) {
 
-  // Disable the archive/unarchive and reply button so the user can't keep pressing them if there is a delay
+  // Disable the archive/unarchive and reply buttons so the user can't keep pressing them if there is a delay
   // CITATION:  I got help with the forEach syntax from https://stackoverflow.com/a/51330000
   document.querySelectorAll('.mailbox-button').forEach(button => {
     button.disabled = true
@@ -316,7 +328,7 @@ function updateArchived(email) {
         archived: !email.archived
       })
     })
-    // Error handling
+    // Load the inbox, or show an error message
     .then(response => {
       if (response.ok === true) {
         loadMailbox('inbox');
@@ -333,7 +345,7 @@ function updateArchived(email) {
 
 
 /**
- * Load the selected email into the compose form as a reply
+ * Load the selected email into the compose form as a quoted reply
  * @param {object} email - The email object to quote in the reply
  */
 

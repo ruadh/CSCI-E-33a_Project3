@@ -1,20 +1,19 @@
 textarea {
-    min-height: 400px;
+    min-height: 40vh;
     margin-bottom: 1rem;
 }
 
-.message-row {
+.list-row {
     border: solid black 1px;
     padding: 0.5rem;
     margin-bottom: 0.5rem;
 }
 
-.from,
-.to {
+.message-address {
     font-weight: bold;
 }
 
-.timestamp{
+.list-timestamp {
     float: right;
     color: dimgray;
 }
@@ -25,6 +24,8 @@ textarea {
 
 .body {
     margin-top: 2rem;
+    background-color: #f7f7f7;
+    padding: 2rem;
 }
 
 .mailbox-button {
@@ -36,9 +37,10 @@ textarea {
     margin-bottom: 2rem;
 }
 
-
-/* TEMP FOR DEVELOPMENT */
-.dev {
-    color: red;
-    size: 3rem;
+.action-buttons {
+    /* This parent element floats right, so the elements below slide upward */
+    float: right;
+    /* The child elements are aligned to the right */
+    display: flex;
+    flex-direction: row-reverse;
 }
