@@ -1,3 +1,6 @@
+// Note:  This submission is based on homework I submitted when I took this class in Spring 2021
+//        I have made some small improvments since then to correct issues highlighted by jshint
+
 // Initialize a global to store the current mailbox, so other functions know the context
 // Its value is set below when we call loadMailbox on DOMContentLoaded
 var currentMailbox = null;
@@ -45,7 +48,7 @@ function composeEmail() {
 
 function enableSubmit() {
 
-  recipients = document.querySelector('#compose-recipients');
+  const recipients = document.querySelector('#compose-recipients');
   if (recipients.value.length > 0) {
     document.querySelector('#submit-email').disabled = false;
   } else {
@@ -61,11 +64,11 @@ function enableSubmit() {
  */
 
 function displaySegment(id) {
-  // Disable them all
+  // First disable all segments
   document.querySelector('#reader-view').style.display = 'none';
   document.querySelector('#emails-view').style.display = 'none';
   document.querySelector('#compose-view').style.display = 'none';
-  // Reenable the one we want to view
+  // Then re-enable the one we want to view
   document.querySelector(id).style.display = 'block';
 }
 
@@ -97,7 +100,7 @@ function newElement(element, innerHTML, cssClass = null) {
  * @param {string} mailbox - The name of the mailbox to be loaded.  
  * 
  * Supported values for mailbox are listed in the API documentation: 
- * https://cs50.harvard.edu/extension/web/2021/spring/projects/3/mail/
+ * https://cs50.harvard.edu/extension/web/2021/fall/projects/3/mail/
  */
 
 function loadMailbox(mailbox) {
@@ -128,28 +131,28 @@ function loadMailbox(mailbox) {
 
       // Create a summary line for each message
       if (count > 0) {
-        for (const email in emails) {
+        emails.forEach(email => {
           // Create the the line and make it clickable to load the message detail
           const summary = newElement('div', null, 'list-row');
-          summary.addEventListener('click', () => loadMessage(emails[email].id));
-          // Style the line based on it's read/unread status
-          if (emails[email].read === true) {
+          summary.addEventListener('click', () => loadMessage(email.id));
+          // Style the line based on its read/unread status
+          if (email.read === true) {
             summary.classList.add('read');
           }
           // Add the message header details
           if (mailbox === 'sent') {
-            // Vlad said it was okay to display the To: for sent messages, even though the spec calls for From:
-            summary.appendChild(newElement('span', `To:  ${emails[email].recipients}`, 'message-address'));
+            // When I asked in Spring 2021, Vlad said it was okay to display the To: for sent messages, even though the spec calls for From:
+            summary.appendChild(newElement('span', `To:  ${email.recipients}`, 'message-address'));
           } else {
-            summary.appendChild(newElement('span', `From:  ${emails[email].sender}`, 'message-address'));
+            summary.appendChild(newElement('span', `From:  ${email.sender}`, 'message-address'));
           }
-          summary.appendChild(newElement('span', `&emsp;${emails[email].subject}`));
-          summary.appendChild(newElement('span', `&emsp;${emails[email].timestamp}`, 'list-timestamp'));
+          summary.appendChild(newElement('span', `&emsp;${email.subject}`));
+          summary.appendChild(newElement('span', `&emsp;${email.timestamp}`, 'list-timestamp'));
 
           // Append the full line to the div 
           messageList.appendChild(summary);
 
-        }
+        });
       }
 
       // Reenable the navigation buttons
@@ -157,7 +160,7 @@ function loadMailbox(mailbox) {
         button.disabled = false;
       });
 
-    })
+    });
 
   // Show the mailbox and hide other views
   displaySegment('#emails-view');
@@ -185,10 +188,10 @@ function sendEmail() {
   // Gather the form values
   // NOTE:  We are NOT validating the form contents, since the API checks the recipients,
   // and the spec does not prohibit other things we might validate like blank emails, sending to self, etc.
-  form = document.querySelector('#compose-form');
-  to = form.querySelector('#compose-recipients').value;
-  subject = form.querySelector('#compose-subject').value;
-  body = form.querySelector('#compose-body').value;
+  const form = document.querySelector('#compose-form');
+  const to = form.querySelector('#compose-recipients').value;
+  const subject = form.querySelector('#compose-subject').value;
+  const body = form.querySelector('#compose-body').value;
 
   // Send the message via the API
   fetch('/emails', {
@@ -202,7 +205,7 @@ function sendEmail() {
     .then(response => response.json())
     .then(result => {
       // Load the sent mailbox or show an error
-      error = result.error;
+      const error = result.error;
       if (error !== undefined) {
         alert(error);
         // Reenable the Submit button so the user can try again
@@ -317,7 +320,7 @@ function updateArchived(email) {
   // Disable the archive/unarchive and reply buttons so the user can't keep pressing them if there is a delay
   // CITATION:  I got help with the forEach syntax from https://stackoverflow.com/a/51330000
   document.querySelectorAll('.mailbox-button').forEach(button => {
-    button.disabled = true
+    button.disabled = true;
   });
 
   // Update the message via the API
@@ -336,7 +339,7 @@ function updateArchived(email) {
         console.log(`Error updating archived status: ${response}`);
         // Re-enable the the archive/unarchive and reply buttons, so the user can try again
         document.querySelectorAll('.mailbox-button').forEach(button => {
-          button.disabled = false
+          button.disabled = false;
         });
       }
     });
